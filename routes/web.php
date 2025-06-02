@@ -13,16 +13,44 @@ use App\Http\Controllers\DocxPreviewController;
 use App\Http\Controllers\SettingsController;
 
 
+
 Route::get('/', function () {
-    $modules = Module::with('lectures')->get(); // або ->all()
+    $modules = [
+        [
+            'title' => 'Модуль 1',
+            'lectures' => [
+                ['title' => 'Лекція 1.1', 'description' => 'Опис лекції 1.1'],
+                ['title' => 'Лекція 1.2', 'description' => 'Опис лекції 1.2'],
+            ]
+        ],
+        [
+            'title' => 'Модуль 2',
+            'lectures' => [
+                ['title' => 'Лекція 2.1', 'description' => 'Опис лекції 2.1'],
+            ]
+        ]
+    ];
+
     return view('welcome', compact('modules'));
 });
 
 
+
 Route::get('/dashboard', function () {
-     $modules = Module::with('lectures')->get(); // або ваша логіка
+    $modules = [
+        [
+            'title' => 'Модуль 1',
+            'lectures' => [
+                ['title' => 'Лекція 1.1', 'description' => 'Опис лекції 1.1'],
+                ['title' => 'Лекція 1.2', 'description' => 'Опис лекції 1.2'],
+            ]
+        ],
+    ];
+
     return view('welcome', compact('modules'));
-})->name('dashboard'); // Без middleware
+})->name('dashboard');
+
+
 
 Route::get('/theory', [ModuleController::class, 'index'])->name('theory.index');
 
