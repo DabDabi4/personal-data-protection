@@ -136,45 +136,49 @@
         <div class="p-8">
             <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">Програма курсу</h2>
 
-            {{-- Список модулів --}}
-            <div class="space-y-4">
-                @foreach ($modules as $module)
-                <div class="module-item bg-gray-50 dark:bg-gray-700 p-5 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-500 transition-all duration-200 shadow-sm" 
-                     @click="openModule = openModule === {{ $module->id }} ? null : {{ $module->id }}">
-                    <div class="flex justify-between items-center cursor-pointer">
-                        <h3 class="font-semibold text-lg text-gray-800 dark:text-white">{{ $module->name }}</h3>
-                        <svg :class="{ 'rotate-180': openModule === {{ $module->id }} }"
-                             class="w-6 h-6 text-gray-500 dark:text-gray-400 transition-transform duration-200"
-                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" 
-                                  stroke-width="2" d="M19 9l-7 7-7-7"/>
-                        </svg>
-                    </div>
-
-                    {{-- Лекції модуля --}}
-                    <div x-show="openModule === {{ $module->id }}" x-transition class="mt-4 space-y-3 pl-2">
-                        @forelse ($module->lectures->sortBy('order') as $lecture)
-                            <a href="{{ route('lectures.show', $lecture) }}"
-                               class="block p-4 bg-white dark:bg-gray-600 rounded-lg hover:bg-indigo-50 dark:hover:bg-gray-500 shadow-sm transition-all duration-200 border-l-4 border-transparent hover:border-indigo-500">
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <h4 class="font-medium text-gray-800 dark:text-gray-100">{{ $lecture->name }}</h4>
-                                        @if($lecture->description)
-                                            <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ $lecture->description }}</p>
-                                        @endif
-                                    </div>
-                                    <span class="text-indigo-600 dark:text-indigo-400 text-lg font-bold">→</span>
-                                </div>
-                            </a>
-                        @empty
-                            <div class="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg text-center">
-                                <p class="text-sm text-gray-500 dark:text-gray-400">У цьому модулі поки нема лекцій.</p>
-                            </div>
-                        @endforelse
-                    </div>
-                </div>
-                @endforeach
+         {{-- Список модулів --}}
+<div class="space-y-4">
+    @forelse ($modules as $module)
+        <div class="module-item bg-gray-50 dark:bg-gray-700 p-5 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-500 transition-all duration-200 shadow-sm" 
+             @click="openModule = openModule === {{ $module->id }} ? null : {{ $module->id }}">
+            <div class="flex justify-between items-center cursor-pointer">
+                <h3 class="font-semibold text-lg text-gray-800 dark:text-white">{{ $module->name }}</h3>
+                <svg :class="{ 'rotate-180': openModule === {{ $module->id }} }"
+                     class="w-6 h-6 text-gray-500 dark:text-gray-400 transition-transform duration-200"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" 
+                          stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
             </div>
+
+            {{-- Лекції модуля --}}
+            <div x-show="openModule === {{ $module->id }}" x-transition class="mt-4 space-y-3 pl-2">
+                @forelse ($module->lectures->sortBy('order') as $lecture)
+                    <a href="{{ route('lectures.show', $lecture) }}"
+                       class="block p-4 bg-white dark:bg-gray-600 rounded-lg hover:bg-indigo-50 dark:hover:bg-gray-500 shadow-sm transition-all duration-200 border-l-4 border-transparent hover:border-indigo-500">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="font-medium text-gray-800 dark:text-gray-100">{{ $lecture->name }}</h4>
+                                @if($lecture->description)
+                                    <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ $lecture->description }}</p>
+                                @endif
+                            </div>
+                            <span class="text-indigo-600 dark:text-indigo-400 text-lg font-bold">→</span>
+                        </div>
+                    </a>
+                @empty
+                    <div class="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">У цьому модулі поки нема лекцій.</p>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    @empty
+        <div class="text-center text-gray-600 dark:text-gray-300 py-6">
+            <p>Наразі модулі ще не додані.</p>
+        </div>
+    @endforelse
+</div>
         </div>
     </div>
 </section>
