@@ -17,7 +17,7 @@
     
     <style>
         .hero-gradient {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            background: linear-gradient(135deg,rgb(31, 45, 68) 0%, #0f172a 100%);
         }
         .module-item {
             transition: all 0.3s ease;
