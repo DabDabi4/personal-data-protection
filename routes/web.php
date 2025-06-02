@@ -14,7 +14,7 @@ use App\Http\Controllers\SettingsController;
 
 
 
-oute::get('/', function () {
+Route::get('/', function () {
     $modules = Module::with('lectures')->get(); // або ->all()
     return view('welcome', compact('modules'));
 });
