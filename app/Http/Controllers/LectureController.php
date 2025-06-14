@@ -20,7 +20,7 @@ return view('lectures.create', compact('module', 'tags'));
 
     }
 
-   public function store(Request $request, Module $module)
+  public function store(Request $request, Module $module)
 {
     $data = $request->validate([
         'name' => 'required|string|max:255',
@@ -28,6 +28,7 @@ return view('lectures.create', compact('module', 'tags'));
         'content' => 'nullable|string',
         'content_file' => 'nullable|file|mimes:txt,docx',
         'video' => 'nullable|file|mimes:mp4,webm,ogg',
+        'video_url' => 'nullable|url',
         'content_type' => 'required|in:text,file',
     ]);
 
@@ -39,10 +40,11 @@ return view('lectures.create', compact('module', 'tags'));
     } elseif ($request->input('content_type') === 'file' && $request->hasFile('content_file')) {
         $data['file_url'] = $request->file('content_file')->store('lectures', 'public');
     }
-    
 
-    // Обробка відео
-    if ($request->hasFile('video')) {
+    // Обробка відео (виправлена версія без дублювання)
+    if ($request->filled('video_url')) {
+        $data['video_url'] = $request->input('video_url');
+    } elseif ($request->hasFile('video')) {
         $data['video_url'] = $request->file('video')->store('lectures', 'public');
     }
 
@@ -52,7 +54,7 @@ return view('lectures.create', compact('module', 'tags'));
     $data['order'] = Lecture::where('module_id', $module->id)->max('order') + 1;
 
     $lecture = Lecture::create($data);
-$lecture->tags()->sync($request->input('tags', []));
+    $lecture->tags()->sync($request->input('tags', []));
 
     return redirect()->route('theory.index')->with('success', 'Лекцію додано');
 }
@@ -90,10 +92,23 @@ $lecture->tags()->sync($request->input('tags', []));
 
 public function stream(Lecture $lecture)
 {
+      // Перевірка наявності відео
+    if (empty($lecture->video_url)) {
+        abort(404, 'Відео не знайдено');
+    }
+
+    // Обробка посилань на Google Drive
+    if (filter_var($lecture->video_url, FILTER_VALIDATE_URL)) {
+        $driveUrl = $this->getEmbeddableDriveLink($lecture->video_url);
+        return redirect()->away($driveUrl);
+    }
+
+
+    // Обробка локальних файлів
     $path = storage_path('app/public/' . $lecture->video_url);
 
     if (!file_exists($path)) {
-        abort(404);
+        abort(404, 'Файл відео не знайдено');
     }
 
     $mime = mime_content_type($path);
@@ -127,7 +142,10 @@ public function stream(Lecture $lecture)
     fseek($file, $start);
 
     $buffer = 1024 * 8;
-    while (!feof($file) && ftell($file) <= $end) {
+    while (!feof($file) && ($p = ftell($file)) <= $end) {
+        if ($p + $buffer > $end) {
+            $buffer = $end - $p + 1;
+        }
         echo fread($file, $buffer);
         flush();
     }
@@ -135,6 +153,67 @@ public function stream(Lecture $lecture)
     fclose($file);
     exit;
 }
+
+protected function normalizeGoogleDriveUrl($url)
+{
+    // Якщо це вже пряме посилання на перегляд
+    if (str_contains($url, '/preview') || str_contains($url, 'uc?')) {
+        return $url;
+    }
+
+    // Витягуємо ID файлу з різних форматів посилань
+    if (preg_match('/\/file\/d\/([a-zA-Z0-9_-]+)/', $url, $matches)) {
+        $fileId = $matches[1];
+        return "https://drive.google.com/file/d/{$fileId}/preview";
+    }
+
+    // Для посилань виду drive.google.com/open?id=FILE_ID
+    if (str_contains($url, 'open?id=')) {
+        $fileId = explode('open?id=', $url)[1];
+        return "https://drive.google.com/file/d/{$fileId}/preview";
+    }
+
+    return $url;
+}
+
+// Додайте цей метод в кінець класу LectureController, але перед закриваючою дужкою класу }
+protected function getEmbeddableDriveLink($url)
+{
+    // Якщо це вже посилання для перегляду
+    if (str_contains($url, '/preview')) {
+        return $url;
+    }
+
+    // Витягуємо ID файлу з різних форматів посилань Google Drive
+    $patterns = [
+        '/\/file\/d\/([a-zA-Z0-9_-]+)/',       // Стандартний формат
+        '/id=([a-zA-Z0-9_-]+)/',               // Формат з параметром id
+        '/open\?id=([a-zA-Z0-9_-]+)/',         // Формат /open?id=
+        '/drive\/folders\/([a-zA-Z0-9_-]+)/',  // Для папок
+    ];
+
+    foreach ($patterns as $pattern) {
+        if (preg_match($pattern, $url, $matches)) {
+            $fileId = $matches[1];
+            
+            // Визначаємо тип контенту за розширенням (якщо є)
+            $extension = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION);
+            
+            // Формуємо посилання в залежності від типу контенту
+            if (in_array($extension, ['mp4', 'webm', 'avi', 'mov'])) {
+                return "https://drive.google.com/file/d/{$fileId}/preview";
+            } elseif (in_array($extension, ['doc', 'docx', 'xls', 'xlsx'])) {
+                return "https://docs.google.com/document/d/{$fileId}/preview";
+            } else {
+                return "https://drive.google.com/file/d/{$fileId}/preview";
+            }
+        }
+    }
+
+    // Якщо не вдалося розпізнати формат - повертаємо оригінальне посилання
+    return $url;
+}
+
 public function edit(Lecture $lecture)
 {
    $tags = \App\Models\Tag::all();
@@ -150,9 +229,10 @@ public function update(Request $request, Lecture $lecture)
         'content_text' => 'nullable|string',
         'content_file' => 'nullable|file|mimes:txt,docx',
         'video' => 'nullable|file|mimes:mp4,webm,ogg',
+        'video_url' => 'nullable|url', // Додаємо нове поле
     ]);
 
-    // Заміна вмісту текстового файлу
+    // Обробка контенту (залишаємо як є)
     if ($request->filled('content_text') && $lecture->file_url) {
         $filePath = storage_path('app/public/' . $lecture->file_url);
         $ext = pathinfo($filePath, PATHINFO_EXTENSION);
@@ -161,25 +241,25 @@ public function update(Request $request, Lecture $lecture)
         }
     }
 
-    // Якщо завантажено новий текстовий файл — замінити
     if ($request->hasFile('content_file')) {
-        // Видалити попередній, якщо існує
         if ($lecture->file_url) {
             Storage::disk('public')->delete($lecture->file_url);
         }
-
-        // Зберегти новий
         $data['file_url'] = $request->file('content_file')->store('lectures', 'public');
     }
 
-    // Якщо завантажено нове відео — замінити
-    if ($request->hasFile('video')) {
-        // Видалити попереднє, якщо існує
-        if ($lecture->video_url) {
+    // Ось сюди додаємо нову логіку для відео
+    if ($request->filled('video_url')) {
+        // Якщо було локальне відео - видаляємо його
+        if ($lecture->video_url && !filter_var($lecture->video_url, FILTER_VALIDATE_URL)) {
             Storage::disk('public')->delete($lecture->video_url);
         }
-
-        // Зберегти нове
+        $data['video_url'] = $request->input('video_url');
+    } elseif ($request->hasFile('video')) {
+        // Видаляємо старе відео (якщо воно було не посиланням)
+        if ($lecture->video_url && !filter_var($lecture->video_url, FILTER_VALIDATE_URL)) {
+            Storage::disk('public')->delete($lecture->video_url);
+        }
         $data['video_url'] = $request->file('video')->store('lectures', 'public');
     }
 

@@ -150,11 +150,29 @@
                                                 <input type="file" name="content_file" accept=".txt,.docx" class="w-full p-2 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                                             </div>
                                         </div>
+<div x-data="{ videoType: 'file' }" class="mb-4">
+    {{-- Перемикач --}}
+    <div class="mb-2">
+        <label class="block font-semibold mb-1">Обрати тип відео:</label>
+        <select x-model="videoType" class="w-full p-2 rounded border text-black">
+            <option value="file">📁 Завантажити файл</option>
+            <option value="url">🌐 Посилання на відео</option>
+        </select>
+    </div>
 
-                                        <div class="mb-2">
-                                            <label for="video-{{ $module->id }}">Відео (mp4, webm, ogg)</label>
-                                            <input type="file" id="video-{{ $module->id }}" name="video" class="w-full p-2 rounded" accept="video/*">
-                                        </div>
+    {{-- Завантаження файлу --}}
+    <div class="mb-2" x-show="videoType === 'file'" x-cloak>
+        <label for="video-{{ $module->id }}" class="block mb-1">Відео (mp4, webm, ogg)</label>
+        <input type="file" id="video-{{ $module->id }}" name="video" class="w-full p-2 rounded border" accept="video/*">
+    </div>
+
+    {{-- Посилання на відео --}}
+    <div class="mb-2" x-show="videoType === 'url'" x-cloak>
+        <label for="video_url-{{ $module->id }}" class="block mb-1">Посилання на відео (Google Drive) ось приклад https://drive.google.com/file/d/.../preview</label>
+        <input type="url" id="video_url-{{ $module->id }}" name="video_url" class="w-full p-2 rounded bg-white text-black" placeholder="https://drive.google.com/...">
+    </div>
+</div>
+
 
                                         <div class="mb-4">
                                             <progress id="progress-bar-{{ $module->id }}" value="0" max="100" class="w-full h-4 hidden"></progress>
